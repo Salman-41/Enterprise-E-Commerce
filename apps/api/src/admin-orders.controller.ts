@@ -27,6 +27,7 @@ export class AdminOrdersController {
         q: z.string().optional(),
         search: z.string().optional(),
         status: z.string().optional(),
+        sort: z.enum(["createdAt", "status"]).default("createdAt"),
       }),
       raw,
     );
@@ -46,7 +47,8 @@ export class AdminOrdersController {
         include: orderInclude,
         take: q.limit,
         skip: (q.page - 1) * q.limit,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          q.sort === "status" ? { status: "asc" } : { createdAt: "desc" },
       }),
       db.order.count({ where }),
     ]);
@@ -475,6 +477,8 @@ export class AdminOrdersController {
       pageQuery.extend({
         q: z.string().optional(),
         search: z.string().optional(),
+        status: z.string().max(40).optional(),
+        sort: z.enum(["createdAt", "name", "status"]).default("createdAt"),
       }),
       raw,
     );
@@ -489,7 +493,7 @@ export class AdminOrdersController {
       : {};
     const [items, total] = await Promise.all([
       db.user.findMany({
-        where,
+        where: { ...where, status: q.status },
         select: {
           id: true,
           name: true,
@@ -504,9 +508,14 @@ export class AdminOrdersController {
         },
         take: q.limit,
         skip: (q.page - 1) * q.limit,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          q.sort === "name"
+            ? { name: "asc" }
+            : q.sort === "status"
+              ? { status: "asc" }
+              : { createdAt: "desc" },
       }),
-      db.user.count({ where }),
+      db.user.count({ where: { ...where, status: q.status } }),
     ]);
     return { items, total, page: q.page, limit: q.limit };
   }

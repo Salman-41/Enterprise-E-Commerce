@@ -52,6 +52,7 @@ export class AdminCatalogController {
       pageQuery.extend({
         q: z.string().optional(),
         status: z.string().optional(),
+        sort: z.enum(["createdAt", "name", "status"]).default("createdAt"),
       }),
       raw,
     );
@@ -65,7 +66,12 @@ export class AdminCatalogController {
         include: productInclude,
         skip: (q.page - 1) * q.limit,
         take: q.limit,
-        orderBy: { updatedAt: "desc" },
+        orderBy:
+          q.sort === "name"
+            ? { name: "asc" }
+            : q.sort === "status"
+              ? { status: "asc" }
+              : { createdAt: "desc" },
       }),
       db.product.count({ where }),
     ]);
@@ -201,7 +207,13 @@ export class AdminCatalogController {
   @Get("inventory") @Require("inventory.manage") async inventory(
     @Query() raw: unknown,
   ) {
-    const q = parse(pageQuery.extend({ q: z.string().optional() }), raw);
+    const q = parse(
+      pageQuery.extend({
+        q: z.string().max(200).optional(),
+        sort: z.enum(["updatedAt", "onHand"]).default("updatedAt"),
+      }),
+      raw,
+    );
     const where: Prisma.InventoryItemWhereInput = q.q
       ? {
           variant: {
@@ -218,7 +230,8 @@ export class AdminCatalogController {
         include: { warehouse: true, variant: { include: { product: true } } },
         take: q.limit,
         skip: (q.page - 1) * q.limit,
-        orderBy: { updatedAt: "desc" },
+        orderBy:
+          q.sort === "onHand" ? { onHand: "asc" } : { updatedAt: "desc" },
       }),
       db.inventoryItem.count({ where }),
     ]);
@@ -300,15 +313,25 @@ export class AdminCatalogController {
   @Get("promotions") @Require("promotions.manage") async promotions(
     @Query() raw: unknown,
   ) {
-    const q = parse(pageQuery, raw);
+    const q = parse(
+      pageQuery.extend({
+        q: z.string().max(200).optional(),
+        sort: z.enum(["createdAt", "name"]).default("createdAt"),
+      }),
+      raw,
+    );
+    const where: Prisma.PromotionWhereInput = q.q
+      ? { name: { contains: q.q, mode: "insensitive" } }
+      : {};
     const [items, total] = await Promise.all([
       db.promotion.findMany({
+        where,
         include: { coupons: true, rules: true },
         take: q.limit,
         skip: (q.page - 1) * q.limit,
-        orderBy: { createdAt: "desc" },
+        orderBy: q.sort === "name" ? { name: "asc" } : { createdAt: "desc" },
       }),
-      db.promotion.count(),
+      db.promotion.count({ where }),
     ]);
     return { items, total, ...q };
   }
@@ -349,18 +372,36 @@ export class AdminCatalogController {
   @Get("reviews") @Require("reviews.manage") async reviews(
     @Query() raw: unknown,
   ) {
-    const q = parse(pageQuery, raw);
+    const q = parse(
+      pageQuery.extend({
+        q: z.string().max(200).optional(),
+        status: z.enum(["approved", "pending", "rejected"]).optional(),
+        sort: z.enum(["createdAt", "status"]).default("createdAt"),
+      }),
+      raw,
+    );
+    const where: Prisma.ReviewWhereInput = {
+      status: q.status,
+      OR: q.q
+        ? [
+            { body: { contains: q.q, mode: "insensitive" } },
+            { product: { name: { contains: q.q, mode: "insensitive" } } },
+          ]
+        : undefined,
+    };
     const [items, total] = await Promise.all([
       db.review.findMany({
+        where,
         include: {
           product: { select: { name: true } },
           user: { select: { name: true, email: true } },
         },
         take: q.limit,
         skip: (q.page - 1) * q.limit,
-        orderBy: { createdAt: "desc" },
+        orderBy:
+          q.sort === "status" ? { status: "asc" } : { createdAt: "desc" },
       }),
-      db.review.count(),
+      db.review.count({ where }),
     ]);
     return { items, total, ...q };
   }
@@ -379,9 +420,34 @@ export class AdminCatalogController {
     await audit(db, r, "review.moderate", "Review", id, i);
     return result;
   }
-  @Get("content") @Require("content.manage") async content() {
-    const items = await db.cmsPage.findMany();
-    return { items, total: items.length, page: 1, limit: 100 };
+  @Get("content") @Require("content.manage") async content(
+    @Query() raw: unknown,
+  ) {
+    const q = parse(
+      pageQuery.extend({
+        q: z.string().max(200).optional(),
+        sort: z.enum(["updatedAt", "title"]).default("updatedAt"),
+      }),
+      raw,
+    );
+    const where: Prisma.CmsPageWhereInput = q.q
+      ? {
+          OR: [
+            { title: { contains: q.q, mode: "insensitive" } },
+            { slug: { contains: q.q, mode: "insensitive" } },
+          ],
+        }
+      : {};
+    const [items, total] = await Promise.all([
+      db.cmsPage.findMany({
+        where,
+        take: q.limit,
+        skip: (q.page - 1) * q.limit,
+        orderBy: q.sort === "title" ? { title: "asc" } : { updatedAt: "desc" },
+      }),
+      db.cmsPage.count({ where }),
+    ]);
+    return { items, total, page: q.page, limit: q.limit };
   }
   @Patch("content/:id") @Require("content.manage") async updateContent(
     @Param("id") id: string,

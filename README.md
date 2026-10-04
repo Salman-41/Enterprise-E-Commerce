@@ -92,7 +92,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-The local API suite passed **57 assertions** over real HTTP and an embedded PostgreSQL engine. It covers ownership, retry, coupon exhaustion, stock contention, signed duplicate webhooks, fulfillment limits and exact split refunds. Embedded PostgreSQL serializes backend connections; this is not proof of production PostgreSQL concurrency performance. All **six Playwright browser flows passed** locally using Chromium headless shell. Native PostgreSQL integration is configured in CI. [Verification details and remaining work](docs/verification.md) distinguish executed checks from pending ones.
+The local API suite passed **64 assertions** over real HTTP and an embedded PostgreSQL engine. It covers ownership, retry, coupon exhaustion, stock contention, signed duplicate webhooks, fulfillment limits, exact split refunds and validated admin table queries. Embedded PostgreSQL serializes backend connections; this is not proof of production PostgreSQL concurrency performance. All **six Playwright browser flows passed** locally using Chromium headless shell. Native PostgreSQL integration is configured in CI. [Verification details and remaining work](docs/verification.md) distinguish executed checks from pending ones.
 
 ## Engineering decisions
 

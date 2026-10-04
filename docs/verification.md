@@ -7,30 +7,31 @@ Recorded 4 October 2026. Results describe this revision and execution environmen
 - Database schema, two SQL migrations and deterministic seed. Executed migrations in PGlite (embedded PostgreSQL); seed printed 120 products / 360 variants / 104 users / 300 orders / 250 reviews / 720 inventory rows.
 - All five packages passed TypeScript checks. API compiled; Next.js production build generated 27 routes.
 - Unit tests: 9 API + 5 integration adapter + 4 worker + 9 frontend tests passed (27 total). The native database worker integration test requires TEST_DATABASE_URL and was skipped locally.
-- Real HTTP API suite: 57 assertions passed. Coverage includes checkout replay/input conflict, authorization, gift decline/retry, coupon usage caps, last-unit contention, signed webhooks, fulfillment and cash/gift refund replay.
+- Real HTTP API suite: 64 assertions passed locally. Coverage includes checkout replay/input conflict, authorization, gift decline/retry, coupon usage caps, last-unit contention, signed webhooks, fulfillment and cash/gift refund replay.
 - Fixed JSONB key-order-dependent webhook deduplication found by the suite.
 - Source formatting and ESLint checks passed independently from TypeScript.
 - Six Playwright E2E flows passed (13.7 seconds) against the production Next.js server/API using Chromium headless shell: catalog edit + stock ledger, partial refund, read-only RBAC, guest purchase/tracking, declined-payment retry, customer login/history.
 - Actual desktop/mobile/store operations screenshots captured and visually inspected.
-- GitHub Actions exercised native PostgreSQL 17 migrations, deterministic seed and the worker reservation integration test successfully. Its first HTTP suite found raw-query SQLSTATE 40001 escaping transaction retries; the retry boundary now handles 40001 / 40P01 with four bounded attempts and a 409 response on exhaustion. Four regression tests passed; full native CI rerun pending.
+- GitHub Actions exercised native PostgreSQL 17 migrations, deterministic seed and the worker reservation integration test successfully. Its first HTTP suite found raw-query SQLSTATE 40001 escaping transaction retries; the retry boundary now handles 40001 / 40P01 with four bounded attempts and a 409 response on exhaustion. Four regression tests passed. Native CI then passed all 57 HTTP assertions and all six browser flows ([run](https://github.com/Salman-41/Enterprise-E-Commerce/actions/runs/37214243975)).
 - Actual background smoke check passed: PostgreSQL outbox → Redis 7 / BullMQ → running worker → local SMTP server; completed JobRecord, processed OutboxEvent and received message verified.
+- Completed allowlisted server-side sorts and filters for catalog, inventory, orders, customers, promotions, review moderation and paginated CMS content; seven additional real HTTP checks passed.
 - Fixed asynchronous brand selection in the editor and missing inventory/review permissions in the deterministic seed.
 
 ## IN PROGRESS
 
-- Source published to GitHub; native HTTP/browser CI rerun pending after contention fix.
+- Publishing admin query fixes and rerunning the expanded 64-assertion suite in native PostgreSQL CI.
 
 ## BLOCKED / NOT VERIFIED
 
 - Full Chromium initially failed before page load because this environment denies its process-singleton Unix socket. Standard Chromium headless shell ran successfully; all six flows passed. CI installs normal Chromium on Ubuntu.
 - Docker daemon unavailable. Compose and image builds have not been exercised here.
-- Native multi-backend PostgreSQL was not available locally. CI uses PostgreSQL 17; migrations, seed and worker integration passed. Full checkout contention/browser confirmation awaits the retry fix rerun.
+- Native multi-backend PostgreSQL was not available locally. CI uses PostgreSQL 17; migrations, seed and worker integration passed. Checkout contention and all browser flows passed in native CI.
 - Meilisearch/MinIO end-to-end delivery and Stripe test account behavior remain unverified. SMTP was exercised against a local test SMTP server; Mailpit itself was not launched. Adapter and mocked worker tests passed.
 - No live deployment or production benchmarks are claimed. Screenshots are actual local captures; their order/revenue values come from fictional fixtures.
 
 ## NEXT
 
-1. Confirm native PostgreSQL migration/HTTP/worker integration tests and browser flows through CI; fix any platform-specific failures.
+1. Confirm the expanded admin query regression checks in native CI.
 2. Exercise SMTP, Meilisearch indexing/rebuild and private bucket exports against Compose services.
 3. Add production deployment secrets, backups, shared rate limiting, resource limits and observability.
 4. Wire a real provider's test flow with merchant amount/currency validation before enabling payment integration.

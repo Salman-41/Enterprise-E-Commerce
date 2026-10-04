@@ -474,6 +474,74 @@ async function main() {
     password: "DemoAdmin!2026",
   });
   check(login.status === 201, "seeded administrator login works");
+  const sortedProducts = await admin.request(
+    `/admin/products?q=QA%20${run}&sort=name&limit=100`,
+  );
+  check(
+    sortedProducts.status === 200 &&
+      sortedProducts.data.total > 0 &&
+      sortedProducts.data.items.every(
+        (item: { name: string }, index: number, items: { name: string }[]) =>
+          index === 0 || items[index - 1].name <= item.name,
+      ),
+    "admin product sorting uses the database query",
+  );
+  const unsafeSort = await admin.request("/admin/products?sort=passwordHash");
+  check(
+    unsafeSort.status === 400,
+    "admin sorting rejects fields outside the allowlist",
+  );
+  const sortedStock = await admin.request(
+    `/admin/inventory?q=QA-${run}&sort=onHand&limit=100`,
+  );
+  check(
+    sortedStock.status === 200 &&
+      sortedStock.data.total > 0 &&
+      sortedStock.data.items.every(
+        (
+          item: { onHand: number },
+          index: number,
+          items: { onHand: number }[],
+        ) => index === 0 || items[index - 1].onHand <= item.onHand,
+      ),
+    "admin inventory sorts numerically",
+  );
+  const customers = await admin.request(
+    `/admin/customers?q=${run}&status=active&sort=name`,
+  );
+  check(
+    customers.status === 200 &&
+      customers.data.total >= 2 &&
+      customers.data.items.every(
+        (item: { status: string }) => item.status === "active",
+      ),
+    "admin customer search and status filters agree with count",
+  );
+  const absentPromotions = await admin.request(
+    `/admin/promotions?q=missing-${run}`,
+  );
+  check(
+    absentPromotions.status === 200 && absentPromotions.data.total === 0,
+    "admin promotion search filters rows and count",
+  );
+  const reviews = await admin.request(
+    "/admin/reviews?status=pending&sort=status",
+  );
+  check(
+    reviews.status === 200 &&
+      reviews.data.items.every(
+        (item: { status: string }) => item.status === "pending",
+      ),
+    "admin review moderation filters publication status",
+  );
+  const pages = await admin.request("/admin/content?sort=title&limit=1&page=2");
+  check(
+    pages.status === 200 &&
+      pages.data.page === 2 &&
+      pages.data.items.length <= 1,
+    "CMS content is server paginated",
+  );
+
   const fulfillment = await admin.request(
     `/admin/orders/${signed.data.id}/fulfill`,
     "POST",
