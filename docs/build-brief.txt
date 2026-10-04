@@ -1,0 +1,463 @@
+ENGINEERING BUILD BRIEF
+Enterprise E-Commerce Platform
+Full-Stack Architecture, Product Requirements, Data Model, Delivery Plan & Master Build Prompt
+
+Target stack: Next.js 16.3.8 + React 19.3 + TypeScript + NestJS 12 + Node.js 24 LTS + PostgreSQL + Redis. The system must run end-to-end with seeded dummy data and no paid service required for local development.
+
+Primary goal
+Build a polished, portfolio-grade commerce product that demonstrates real frontend, backend, database, search, queue, caching, security, testing and DevOps capability.
+Product type
+Modern multi-category B2C e-commerce platform with advanced operational features and architecture ready for future marketplace/multi-vendor expansion.
+Design direction
+Premium editorial commerce: clean grids, strong product photography, confident typography, subtle motion, excellent mobile UX, restrained visual effects.
+Local-first rule
+Every major feature must be testable locally using Docker-backed infrastructure, seeded data and mock adapters. External services are optional integrations, never hard requirements.
+Completion standard
+No dead buttons, fake forms, TODO screens, empty admin pages, non-functional filters, or placeholder checkout logic. The demo must behave like a real store.
+
+Prepared as a build document that can be handed directly to ChatGPT Work, Codex, or a software engineering team.
+
+Document map
+1. Stack decision and architecture
+2. Product experience and page inventory
+3. Commerce features and business rules
+4. Backend platform modules
+5. Data model and state machines
+6. Search, caching, queues and realtime behavior
+7. Admin and operations console
+8. Seed data and demo accounts
+9. UI system and interaction quality
+10. Security, privacy and reliability
+11. Testing, performance and accessibility
+12. DevOps, local environment and deployment
+13. Definition of done
+14. Master build prompt (copy/paste-ready)
+This is deliberately broader than a typical CRUD shop. The project should show product engineering depth: transactional correctness, inventory consistency, webhooks, idempotency, background jobs, audit logs, observability and automated tests.
+
+1. Stack decision and architecture
+Use one language across the application wherever practical: TypeScript. The frontend is Next.js and React; the dedicated API is NestJS. This keeps the developer experience coherent while giving the backend enough structure to demonstrate serious application architecture.
+Web application
+Next.js 16.3.8 (App Router), React 19.3, TypeScript strict mode, Server Components by default, Client Components only for interaction-heavy UI.
+Backend API
+NestJS 12 on Node.js 24 LTS. REST-first API with OpenAPI/Swagger, WebSocket or SSE channels for selected realtime events, and modular domain boundaries.
+Workspace
+pnpm workspaces + Turborepo. Apps: web, api, worker. Packages: ui, database, contracts, config, eslint-config, tsconfig.
+Primary database
+PostgreSQL. Use an ORM with migrations, typed schema and transactions (Prisma ORM is preferred unless compatibility requires another mature TypeScript ORM).
+Cache / rate limits
+Redis. Use it for cache entries, session-related ephemeral state, distributed rate limiting and selected locks.
+Background jobs
+BullMQ over Redis. Dedicated worker process for email, search indexing, stock alerts, abandoned-cart reminders, exports, webhook retries and analytics aggregation.
+Search
+Meilisearch in Docker for typo-tolerant product search, facets, ranking and suggestions. Keep a database fallback for simple exact queries.
+Object storage
+S3-compatible adapter. Local MinIO in Docker; production-compatible with S3/R2 or equivalent.
+Payments
+Provider interface with a fully functional mock payment provider for local demo. Add Stripe test-mode adapter as the first real provider.
+Email
+Provider abstraction. Local Mailpit/MailHog for development; production adapter can be Resend/Postmark/SES.
+Validation
+Shared DTO/schema contracts using Zod where useful plus NestJS validation at API boundaries.
+Testing
+Vitest/Jest for unit and integration, Supertest for API integration, Playwright for browser E2E.
+Observability
+Structured logs, request IDs, health/readiness endpoints, metrics hooks and OpenTelemetry-ready instrumentation.
+Architecture rules
+Keep business rules in backend/domain services, not scattered through React components.
+Use database transactions for order placement, payment recording, inventory reservations and refunds where consistency matters.
+Use idempotency keys on sensitive write operations such as checkout, payment confirmation, refund and webhook processing.
+Use an outbox/event pattern for post-transaction asynchronous work when a lost event would create incorrect behavior.
+Never couple the storefront directly to Stripe, Redis, Meilisearch or object storage. Access these through service adapters.
+Share only stable types/contracts across apps; do not share backend persistence models directly with the browser.
+Prefer server rendering and cache-aware data access for SEO pages; hydrate only interactive islands.
+apps/
+  web/        # Next.js storefront + account + admin UI
+  api/        # NestJS REST API
+  worker/     # BullMQ processors
+packages/
+  ui/         # shared design-system components
+  database/   # schema, migrations, seed helpers
+  contracts/  # request/response types and Zod schemas
+  config/     # typed environment configuration
+  eslint-config/
+  tsconfig/
+docker/
+  compose.yml # postgres, redis, meilisearch, minio, mailpit
+
+2. Product experience and page inventory
+Storefront
+Home: hero campaign, category shortcuts, new arrivals, best sellers, curated collections, editorial block, recommendation rail, newsletter signup and recently viewed items.
+Shop / category pages: server-rendered product grid, breadcrumbs, sticky filter drawer, multi-select facets, price range, rating, availability, brand, color, size, sort, pagination/infinite-load strategy, URL-synchronized filters.
+Search: instant suggestions, typo tolerance, recent searches, popular searches, category/brand suggestions, full result page with facets and zero-result recovery.
+Product detail: image gallery/zoom, video slot, variant selector, price and compare-at price, stock status, shipping estimate, quantity, add-to-cart, buy-now, wishlist, compare, size guide, details/specifications, reviews, Q&A, related products, bundles, recently viewed.
+Cart: persistent guest cart, signed-in cart merge, quantity edits, stock revalidation, promo code, gift card, shipping estimate, cross-sells, saved-for-later.
+Checkout: contact, address, delivery method, payment, tax/discount summary, review order, idempotent submission, confirmation page. Guest checkout and account checkout both work.
+Customer account: profile, addresses, password/security, orders, order detail, invoices, returns, refunds, wishlists, saved items, reviews, notifications, loyalty/gift-card balances.
+Order tracking: public tokenized tracking page plus authenticated order view; timeline events and shipment data.
+Content pages: About, Contact, FAQ, shipping policy, returns policy, privacy, terms, buying guides, campaign/collection landing pages.
+Error and system states: 404, 500, maintenance, empty states, out-of-stock, expired promo, failed payment, retry payment and offline-friendly messaging.
+Admin / operations console
+Dashboard with revenue, orders, AOV, conversion proxy, refunds, low-stock products, top products, customer growth and recent operational alerts.
+Products, variants, categories, collections, brands, attributes, media, pricing and SEO metadata.
+Inventory by warehouse/location, stock adjustments, reservations, stock movement history, low-stock thresholds and CSV import/export.
+Orders with search/filter, state transitions, payment timeline, fulfillment, cancellations, partial refunds, full refunds, returns/RMA, customer notes and internal notes.
+Customers with profile, addresses, order history, lifetime value, tags, support notes and account status.
+Promotions: coupons, automatic discounts, campaign dates, usage limits, per-customer limits, minimum spend, product/category eligibility and stacking rules.
+Gift cards, loyalty rules, reviews/Q&A moderation, CMS banners/pages/navigation, email template previews and notification log.
+Roles/permissions, audit log, system health, webhook delivery log, failed jobs/retries and feature flags.
+3. Commerce features and business rules
+Domain
+Required capability
+Catalog
+Products, variants/SKUs, categories, brands, collections, attributes/options, tags, rich descriptions, specifications, media, digital/physical flags, publication scheduling, SEO fields.
+Pricing
+Base price, compare-at price, sale windows, currency formatting, tax-inclusive/exclusive display strategy, product/variant overrides and price history.
+Inventory
+Per-location available/on-hand/reserved quantities, safety stock, backorder policy, low-stock threshold, atomic reservation during checkout, release on failure/expiration, adjustments and movement ledger.
+Cart
+Guest cart cookie/token, authenticated cart, merge-on-login, validation against current price/stock, saved-for-later, cart expiry, coupon/gift-card application.
+Checkout
+Guest + logged-in flows, address validation rules, delivery options, tax engine adapter, discount engine, payment intent abstraction, order snapshotting and idempotency.
+Orders
+Immutable order item snapshots, status history, payments, fulfillments, shipments, cancellation policy, invoices, notes and timeline.
+Payments
+Authorize/capture abstraction, successful/failed/pending states, provider transaction references, webhook verification, duplicate event prevention, partial/full refund support.
+Shipping
+Shipping zones, rate rules, free-shipping thresholds, flat rate, weight/value-based examples, shipment records and tracking links.
+Tax
+Pluggable tax calculator. Default local deterministic tax rules for demo; external provider adapter interface for production.
+Promotions
+Percent/fixed discounts, free shipping, BOGO-style rule, automatic promotions, coupon limits, dates, usage tracking, exclusions and precedence/stacking policy.
+Returns
+Return request, reason, approval/rejection, received state, refund/exchange resolution, restock decision and return timeline.
+Engagement
+Wishlist, comparison, recently viewed, product reviews, review photos, Q&A, back-in-stock subscription, newsletter, related/recommended products.
+Advanced commerce
+Bundles/kits, gift cards, loyalty points, preorder/backorder, subscription-ready product metadata, multi-currency presentation, localization-ready content, multi-warehouse inventory.
+Operational
+CSV imports/exports, scheduled jobs, audit logs, webhook logs, retry queues, feature flags, health checks and admin notifications.
+4. Backend platform modules
+AuthModule – registration, login, logout, email verification, password reset, session/token rotation, device/session management, optional OAuth adapter, account lock/rate-limit rules.
+UsersModule – profiles, preferences, addresses, role membership, customer tags and account states.
+CatalogModule – products, variants, categories, brands, attributes, collections, media and publication lifecycle.
+PricingModule – pricing, sale windows, price calculation and money/currency helpers.
+InventoryModule – warehouses, stock items, reservations, adjustments, movement ledger and low-stock events.
+CartModule – guest/auth carts, merge logic, item validation, save-for-later and totals.
+PromotionModule – coupons, automatic promotions, eligibility, stacking, usage limits and redemptions.
+CheckoutModule – checkout orchestration, address/shipping/tax/payment coordination, idempotency and order creation.
+OrderModule – order state machine, history, cancellations, invoices and customer/admin views.
+PaymentModule – provider adapters, payment/refund records, webhook ingestion, signature verification and idempotent event handling.
+FulfillmentModule – fulfillments, shipments, tracking, partial fulfillment and shipping events.
+ReturnsModule – RMA workflow, approval, receipt, restock and refund/exchange decisions.
+ReviewsModule – ratings, verified purchase, moderation, helpful votes and Q&A.
+WishlistModule – lists, items and shareable private/public tokens if enabled.
+GiftCardModule + LoyaltyModule – balances, ledger entries, redemption and expiration rules.
+SearchModule – indexing, document mapping, query/facet API and reindex jobs.
+CmsModule – content pages, navigation, banners, campaign slots and publishing windows.
+NotificationModule – email/event templates, preferences and delivery logs.
+FilesModule – signed upload/download flows and media validation via S3-compatible storage.
+AnalyticsModule – aggregated commerce metrics and admin dashboard queries.
+AuditModule – actor, action, entity, before/after metadata where appropriate, IP/request ID and timestamp.
+AdminModule – privileged operations, system health, jobs, webhooks and feature flags.
+API conventions
+Base route /api/v1 with consistent resource naming and pagination metadata.
+Use cursor pagination for large/high-churn resources when appropriate; page/limit is acceptable for stable admin tables.
+Every error uses a stable machine-readable code, human-readable message, optional field errors, request ID and correct HTTP status.
+OpenAPI docs must be generated and kept accurate enough to exercise core endpoints.
+Input DTOs reject unknown/unsafe fields; outputs never leak password hashes, refresh-token hashes, private notes or provider secrets.
+Write endpoints that can be retried safely should support Idempotency-Key. Webhook events must be de-duplicated by provider event ID.
+Use optimistic concurrency or version checks where administrators can overwrite the same inventory/catalog records.
+5. Data model and state machines
+Use normalized relational tables for transactional state. Store flexible product metadata only where it is genuinely variable; do not turn the whole schema into untyped JSON. Add created_at / updated_at consistently and soft-delete only where business requirements benefit from recoverability.
+User, Role, Permission, UserRole, Session/RefreshToken, Address, CustomerProfile
+Product, ProductVariant, ProductMedia, Category, ProductCategory, Brand, Collection, ProductCollection, Option, OptionValue, VariantOptionValue
+Warehouse, InventoryItem, InventoryReservation, InventoryMovement
+Cart, CartItem, SavedItem
+Promotion, PromotionRule, Coupon, CouponRedemption, GiftCard, GiftCardLedger, LoyaltyAccount, LoyaltyLedger
+CheckoutSession, Order, OrderItem, OrderAddress, OrderStatusHistory, OrderNote
+Payment, PaymentAttempt, Refund, WebhookEvent
+Fulfillment, FulfillmentItem, Shipment, ShipmentEvent
+ReturnRequest, ReturnItem, ReturnEvent
+Review, ReviewMedia, ReviewVote, ProductQuestion, ProductAnswer
+Wishlist, WishlistItem, RecentlyViewed, BackInStockSubscription
+CmsPage, NavigationMenu, NavigationItem, Banner, FeatureFlag
+Notification, EmailDelivery, AuditLog, JobRecord, IdempotencyRecord
+Core state machines
+Order
+draft → pending_payment → paid → processing → partially_fulfilled / fulfilled → completed. Alternate paths: payment_failed, cancelled, partially_refunded, refunded, return_requested/returned.
+Payment
+created → requires_action / processing → succeeded OR failed; succeeded → partially_refunded → refunded.
+Fulfillment
+unfulfilled → processing → shipped → delivered; support partial fulfillment and cancellation where valid.
+Return
+requested → approved/rejected → in_transit → received → inspected → refund_pending → refunded / exchanged / closed.
+Inventory reservation
+active → committed when order is finalized OR released on payment failure, cancellation or expiry.
+Do not represent order lifecycle with one loosely controlled string. Enforce valid transitions in a domain service and test those transitions.
+
+6. Search, caching, queues and realtime behavior
+Search
+Index searchable product title, description excerpt, SKU, brand, category, tags, option values, price, rating, popularity, stock and publication state.
+Provide typo tolerance, prefix search, facets, sort options, synonyms-ready configuration and highlighted snippets where useful.
+Reindex via queue on product/category/inventory changes. Include a CLI/admin command for full index rebuild.
+Never expose unpublished or unauthorized products through the search index.
+Caching
+Use layered caching only for data that benefits from it: category navigation, product summaries, CMS content, selected analytics and rate-limit counters.
+Invalidate or version cache entries when catalog/pricing/inventory data changes. Never cache user-private responses in shared cache keys.
+Use Next.js cache controls intentionally on public pages; do not rely on accidental static rendering for data that changes frequently.
+Queues and event-driven work
+Email verification, receipts, shipping notifications, back-in-stock alerts, review requests and abandoned-cart messages.
+Product search indexing, image processing hooks, CSV exports, analytics aggregation, stale reservation cleanup and webhook retry.
+Every job has retry/backoff policy, bounded attempts, structured logging and dead/failure visibility in admin.
+Realtime
+Push admin notifications for new orders/failed payments and update customer order/fulfillment timelines through WebSocket or SSE where it improves UX.
+Realtime is an enhancement, not the source of truth. Refreshing the page must always recover correct state from PostgreSQL.
+7. Admin and operations console
+Use the same Next.js application under a protected /admin route group or a clearly separated app package if code organization benefits from it.
+Implement RBAC permissions such as catalog.read, catalog.write, orders.read, orders.manage, refunds.issue, customers.read, promotions.manage, content.manage, analytics.read and system.admin.
+Every destructive or financial action requires a confirmation dialog; high-impact actions create audit events.
+Large tables support server-side filtering, sorting, pagination, column visibility and export.
+Admin forms include validation, dirty-state protection, image management, keyboard accessibility and clear success/error feedback.
+Operational screens include failed jobs, webhook attempts, recent errors/health status, low-stock alerts and audit events.
+Analytics dashboard must use real seeded database aggregates rather than hard-coded chart arrays.
+Admin metrics
+Revenue
+Gross revenue, net revenue after refunds, trend vs previous comparable period.
+Orders
+Order count, paid orders, cancellation rate, refund rate, average order value.
+Catalog
+Best sellers, low-stock variants, out-of-stock count, inventory value approximation.
+Customers
+New customers, repeat customers, top customers by lifetime spend.
+Funnel proxy
+Product views → add to cart → checkout started → order placed using first-party event rows for demo analytics.
+Operations
+Failed payments, failed jobs, webhook failures, return requests awaiting action.
+8. Seed data and demo accounts
+The repository must seed a visually rich, coherent demo store. Dummy data should be deterministic so screenshots and tests remain stable.
+Products
+At least 120 products across 12–18 categories, 8–12 brands and 6 curated collections.
+Variants
+Size/color/style variants with realistic SKU patterns, price differences and stock levels; at least 350 total variants.
+Inventory
+Two warehouses/locations, varied stock, reservations, low-stock and out-of-stock examples.
+Customers
+100+ customers with addresses and preferences.
+Orders
+300+ orders covering pending, paid, fulfilled, cancelled, partially refunded, refunded and returned states.
+Reviews
+250+ reviews with mixed ratings, verified purchase flags and a small moderation queue.
+Promotions
+Active, scheduled, expired and usage-limited coupons plus one automatic promotion and a free-shipping rule.
+CMS
+Homepage campaign content, navigation menus, buying guide/article pages and policy pages.
+Analytics events
+Enough seeded product_view, add_to_cart, checkout_started and purchase events to create believable charts.
+Assets
+Use locally generated or permissively licensed placeholder imagery. The application must not break if an external image host is unavailable.
+Demo users
+customer@example.com / DemoCustomer!2026
+admin@example.com    / DemoAdmin!2026
+ops@example.com      / DemoOps!2026
+viewer@example.com   / DemoViewer!2026
+
+Seed scripts may print these demo credentials. Production builds must never seed known passwords unless explicitly enabled for a demo environment.
+9. UI system and interaction quality
+Visual direction
+Create a premium commerce identity with a neutral base, one restrained accent color, strong typography, generous but efficient spacing and editorial image composition.
+Avoid generic “AI SaaS” gradients, excessive glassmorphism, neon glows, random floating blobs and dashboard styling on the consumer storefront.
+Use product photography as the primary visual layer. Motion should be subtle: hover media transitions, drawer/sheet movement, cart feedback and route/loading transitions.
+Desktop grids should feel intentional; mobile must be designed separately rather than simply stacked. Keep primary purchase actions reachable with one thumb.
+Use skeletons for loading, toast/inline feedback for operations, meaningful empty states and resilient error boundaries.
+Component system
+Build reusable primitives for buttons, links, inputs, selects, comboboxes, dialogs, sheets, popovers, tabs, accordion, table, pagination, badges, toasts, skeletons and form fields.
+Commerce components: product card, price display, rating, variant selector, quantity control, image gallery, mini-cart, cart line, money summary, address card, order timeline, promo entry, review card and stock badge.
+Admin components: data table, filters, bulk actions, stat card, chart wrapper, audit timeline, job status chip and destructive-action confirmation.
+All form controls have labels, focus states, validation messages and keyboard behavior. Avoid icon-only controls without accessible names.
+10. Security, privacy and reliability
+Hash passwords with Argon2id. Apply password strength rules, rate limits and generic login/reset responses that do not leak account existence.
+Use HTTP-only secure cookies where applicable; rotate refresh/session credentials and support logout-all/devices. Never store raw refresh tokens in the database.
+Protect state-changing browser flows against CSRF as required by the chosen session strategy. Use SameSite, Origin/Referer validation and CSRF tokens where appropriate.
+Use Helmet/security headers, CSP, strict input validation and output encoding. Sanitize any rich HTML allowed in CMS/product content.
+Validate upload MIME/type/size; use randomized object keys; never trust user-supplied file paths.
+Rate-limit login, password reset, coupon validation, checkout, review submission and public search endpoints with sensible policies.
+Use role/permission guards on every admin API path; frontend route protection alone is insufficient.
+Verify payment/webhook signatures, store provider event IDs, and process webhooks idempotently.
+Protect inventory and coupon usage from race conditions using transactions, row-level locking/atomic updates or equivalent database-safe mechanisms.
+Keep secrets only in environment variables/secret stores. Commit an .env.example with safe placeholders, never live credentials.
+Audit financial, inventory, permission and destructive admin operations. Redact secrets and sensitive payment data from logs.
+Add database backups/documented restore approach for production deployments and clear migration rollback/forward strategy.
+11. Testing, performance and accessibility
+Automated test expectations
+Unit tests for pricing, promotions, taxes, inventory reservation, order transitions, refund math and permission checks.
+Integration tests against a real test PostgreSQL instance for checkout, payment webhook idempotency, inventory consistency and returns.
+API tests for auth lifecycle, catalog reads, cart mutation, checkout, admin permissions and error format.
+Playwright E2E for guest purchase, authenticated purchase, coupon, failed payment/retry, order history, admin product edit and admin refund.
+Test concurrency-sensitive scenarios: two checkouts competing for the last unit; duplicate payment webhook; repeated refund request; coupon limit reached.
+Add smoke test script that seeds the app, starts services and verifies health + a storefront page + API endpoint.
+Performance targets
+Aim for Core Web Vitals in the good range on representative product/category pages under production build.
+Optimize images with responsive sizes, stable aspect ratios and lazy loading below the fold.
+Avoid client-fetch waterfalls for SEO-critical pages. Parallelize independent server fetches.
+Use database indexes based on actual access patterns: slug, SKU, status, category relations, order/customer/date queries, coupon code, inventory variant/location, audit timestamps.
+Profile N+1 query risks. Use select/projection to avoid returning oversized ORM objects.
+Accessibility
+Target WCAG 2.2 AA for navigation, forms, dialogs, drawers, tables, checkout and purchase flows.
+Keyboard-only users must be able to search, filter, choose variants, add to cart and complete checkout.
+Maintain visible focus, semantic headings, landmarks, accessible names, sufficient contrast, proper error association and reduced-motion support.
+12. DevOps, local environment and deployment
+pnpm install
+docker compose up -d postgres redis meilisearch minio mailpit
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+
+# expected local surfaces
+web:        http://localhost:3000
+api:        http://localhost:4000
+api docs:   http://localhost:4000/docs
+mail:       http://localhost:8025
+search:     http://localhost:7700
+minio:      http://localhost:9001
+
+Repository requirements
+Provide README with architecture diagram (text/Mermaid is acceptable in README), setup, demo accounts, commands, environment variables, testing and screenshots.
+Provide .env.example for each app or a documented unified environment strategy.
+Add database migration and deterministic seed commands that can rebuild demo state from scratch.
+GitHub Actions: lint, typecheck, unit tests, integration tests and production build. Run Playwright where CI resources permit.
+Dockerfiles for api/worker and a compose file for local dependencies. Web can run locally via pnpm and deploy to Vercel; document a container option as well.
+Production deployment should keep web, API, worker, PostgreSQL, Redis/search/storage responsibilities explicit. Do not hide stateful services inside serverless request handlers.
+13. Definition of done
+A first-time developer can clone, configure safe local env values, start Docker services, migrate/seed, and run the project without manually creating database rows.
+Guest user can browse, search, filter, open a product, choose valid variant, add to cart and complete a mock-payment purchase.
+Signed-in user can manage addresses, view orders, request a return, maintain wishlist and submit a review for an eligible purchase.
+Admin can create/edit/publish a product, adjust inventory, manage a promotion, inspect an order, fulfill it, issue partial refund and review audit history.
+Inventory cannot oversell in the tested last-unit race condition.
+Duplicate checkout submission and duplicate webhook delivery do not create duplicate orders/payments.
+Search index updates after catalog changes and can be fully rebuilt.
+Emails appear in local mail viewer for verification/order/shipping/reset flows.
+No major navigation item or visible CTA points to an unfinished screen.
+No core chart, metric, product list or order list is a hard-coded frontend-only array once the backend is running.
+Tests cover core business rules and critical E2E flows; lint/typecheck/build pass.
+UI is responsive from small mobile through wide desktop and has polished loading, empty, error and success states.
+Repository contains screenshots and a concise architecture explanation suitable for a technical portfolio.
+Finish the end-to-end purchase and operations loops before adding decorative extras. A smaller number of deeply working modules is better than a large number of fake screens — but this specification expects all listed core modules to be implemented, not merely designed.
+
+14. Master build prompt
+Copy this section into ChatGPT Work/Codex or use it as the controlling implementation brief. It is written to force implementation quality, not just code generation volume.
+
+ROLE & OUTCOME
+Act as a senior product-engineering team: staff frontend engineer, backend architect, database engineer, e-commerce domain engineer, UX designer, QA engineer, security engineer and DevOps engineer.
+Build a complete, production-style e-commerce platform with a premium storefront and a serious operations/admin backend. This is a portfolio flagship, not a tutorial, landing page or UI-only prototype.
+Everything must be implemented with realistic dummy data and fully working local functionality. No dead buttons, fake checkout, hard-coded admin charts, TODO pages, placeholder forms or “coming soon” for core requirements.
+MANDATORY TECHNOLOGY
+Use Next.js 16.3.8 with the App Router, React 19.3 and strict TypeScript for the web application.
+Use Node.js 24 LTS and NestJS 12 for a dedicated backend API. Do not use Python.
+Use pnpm workspaces + Turborepo. Structure the repo with apps/web, apps/api, apps/worker and shared packages for UI, database, contracts and configuration.
+Use PostgreSQL for transactional data. Use a mature typed TypeScript ORM with migrations and transactions; prefer Prisma unless a current compatibility issue requires an equivalent alternative.
+Use Redis for caching/rate limiting/ephemeral coordination and BullMQ for background jobs.
+Use Meilisearch for product search and facets. Use MinIO locally through an S3-compatible storage adapter. Use Mailpit/MailHog locally for email capture.
+Implement a payment-provider abstraction with a complete local mock provider plus Stripe test-mode support. The project must work without paid services.
+Generate accurate OpenAPI/Swagger documentation for the backend. Use REST as the primary API style; use WebSocket or SSE only for meaningful realtime notifications.
+PRODUCT & DESIGN DIRECTION
+Create a high-end multi-category B2C store with a brand identity that feels like a modern premium retailer, not an AI/SaaS dashboard.
+Use a restrained neutral palette, one accent, excellent typography, editorial product imagery, clean grids, subtle animation and polished responsive behavior.
+Avoid excessive gradients, glassmorphism, neon glow, random floating shapes and over-designed hero gimmicks.
+Design mobile intentionally. Optimize filters, product selection, cart and checkout for touch. Keep accessibility and keyboard behavior first-class.
+STOREFRONT REQUIREMENTS
+Build Home, Shop, Category, Collection, Search, Product Detail, Cart, Checkout, Order Confirmation, Order Tracking, Customer Account and content/policy pages.
+Home must include campaign hero, category navigation, new arrivals, best sellers, curated collections, editorial module, recommendations, newsletter and recently viewed.
+Category/search pages must support URL-synchronized facets, price range, category, brand, rating, availability, color/size where relevant, sort, pagination and polished empty states.
+Product pages must include media gallery, variant selection, current/compare price, stock, shipping estimate, quantity, add-to-cart, buy-now, wishlist, compare, details/specs, reviews, Q&A, related products and bundles.
+Cart must persist for guests, merge on login, revalidate current stock/price, support quantity changes, saved-for-later, coupons, gift cards, shipping estimate and cross-sells.
+Checkout must support guest and signed-in purchase, address selection/entry, shipping, tax calculation, discounts, payment, order review, idempotent submission, failed-payment retry and confirmation.
+Account must include profile, addresses, security/sessions, orders, order detail, invoice/receipt view, returns, refunds, wishlist, reviews, gift-card/loyalty balances and notification preferences.
+COMMERCE DOMAIN REQUIREMENTS
+Implement products, variants/SKUs, categories, brands, collections, option values, tags, rich product content, media, publication status and SEO metadata.
+Implement base price, compare-at price, sale windows, currency-safe money handling and variant price overrides.
+Implement inventory per warehouse/location with on-hand, available and reserved quantities, safety stock, low-stock threshold, backorder policy, movement ledger and reservations.
+Implement promotions: percentage, fixed amount, free shipping, BOGO-style example, automatic promotion, coupon dates, usage limits, per-customer limits, minimum spend, product/category eligibility, exclusions and explicit stacking rules.
+Implement shipping zones and deterministic local shipping rules including flat rate, free-shipping threshold and one weight/value-based example.
+Implement a pluggable tax engine with deterministic demo rules and a provider interface for future external tax services.
+Implement gift cards as a monetary ledger and loyalty points as a separate points ledger. Support bundles/kits, preorder/backorder metadata and subscription-ready product metadata.
+Implement reviews with verified-purchase status, moderation, media-ready structure, helpful votes and product Q&A.
+Implement wishlist, comparison, recently viewed and back-in-stock subscriptions.
+CHECKOUT, ORDER, PAYMENT & INVENTORY CORRECTNESS
+Use a checkout orchestration service on the backend. Never build checkout correctness from client-side state alone.
+Create immutable order item/address/price snapshots so historical orders do not change when catalog data changes.
+Use database transactions and/or safe atomic updates so two users cannot both purchase the last unit. Add an automated concurrency test for this.
+Use inventory reservations with expiry/release behavior. Commit reservations when the order/payment reaches the configured success point; release on failure/cancellation/expiry.
+Use idempotency keys for checkout/order creation and sensitive payment operations. Add a test proving duplicate submission does not duplicate an order.
+Implement payment attempts, provider references, verified webhooks and webhook event de-duplication. Add a test proving duplicate webhook delivery is harmless.
+Implement partial and full refunds with correct money totals, refund records and order/payment status updates.
+Implement order, payment, fulfillment and return state machines with validated transitions and history rows.
+RETURNS & FULFILLMENT
+Implement fulfillments and shipments with partial fulfillment capability, carrier/tracking fields and customer-visible timeline.
+Implement a return/RMA workflow: request, reason, approval/rejection, in-transit, received, inspected, refund/exchange decision, restock decision and closure.
+Allow administrators to cancel eligible orders, create fulfillment, mark shipment events, issue partial/full refund and process returns with audit logging.
+ADMIN & OPERATIONS
+Create a protected /admin experience with RBAC on both UI and API. Include roles such as Super Admin, Catalog Manager, Order Manager, Support and Analyst.
+Admin modules: dashboard, products, variants, categories, collections, brands, inventory, warehouses, orders, customers, promotions/coupons, gift cards, loyalty, reviews/Q&A moderation, CMS/navigation/banners, roles/permissions, audit logs, jobs, webhooks, health and feature flags.
+Large tables require server-side search/filter/sort/pagination, meaningful loading/empty/error states and CSV export. Catalog/inventory should support CSV import with validation report.
+Every financial/destructive action uses confirmation and writes an audit record. Permission checks must be enforced by the API, never only by hidden buttons.
+Admin analytics must query real seeded data and display revenue, net revenue, order count, AOV, refunds, cancellations, top products, low stock, customer growth, repeat customers and funnel-proxy metrics.
+DATA MODEL
+Create relational models for users, roles/permissions, sessions, addresses, products/variants/media/categories/brands/collections/options, warehouses/inventory/reservations/movements, carts/items, promotions/coupons/redemptions, gift cards/ledgers, loyalty/ledgers, checkouts, orders/items/addresses/history/notes, payments/attempts/refunds/webhooks, fulfillments/shipments, returns, reviews/Q&A, wishlists, recent views, back-in-stock subscriptions, CMS content, notifications/email deliveries, feature flags, audit logs, jobs and idempotency records.
+Add appropriate unique constraints, foreign keys, indexes and money/quantity types. Avoid using JSON for core relational data just to save schema work.
+AUTHENTICATION & SECURITY
+Implement registration, login, logout, email verification, forgot/reset password, refresh/session rotation, logout-all/devices and account/session management. Use Argon2id for password hashing.
+Use secure HTTP-only cookies where appropriate, rate limiting, CSRF defenses suitable to the auth strategy, strict CORS, security headers/CSP, DTO validation and sanitized rich content.
+Never store raw refresh tokens. Never log secrets or payment-sensitive data. Validate upload type/size and randomize object keys.
+Implement RBAC permission guards on backend routes. Add audit events for permissions, finance, inventory and destructive admin changes.
+Provide safe .env.example files. No real credentials or hard-coded secrets.
+SEARCH, CACHE, JOBS & EVENTS
+Index product data into Meilisearch with typo tolerance, facets, ranking, availability filtering and suggestions. Queue incremental updates and support a full reindex command.
+Use Redis selectively for cache, rate limits and short-lived coordination. Version/invalidate cache on catalog/pricing/inventory changes. Never cross-cache private user data.
+Use BullMQ workers for email, search indexing, stock alerts, abandoned cart, review request, exports, analytics aggregation, stale reservation cleanup and webhook retry.
+Each job has retry/backoff, bounded attempts, structured logs and operational visibility.
+Use an outbox/event pattern for business events that must not be lost after a successful database transaction.
+DUMMY DATA & DEMO EXPERIENCE
+Seed at least 120 coherent products, 350 variants, 12–18 categories, 8–12 brands, 6 collections, two warehouses, 100 customers, 300 orders, 250 reviews, promotions, CMS content and analytics events.
+Include examples of in-stock, low-stock, out-of-stock, sale, backorder, refunded, returned, failed payment and pending states so every screen can be demonstrated.
+Provide deterministic demo accounts for customer, admin, operations and read-only/viewer roles. Print them after seed. Never enable demo credentials automatically in production.
+Use local or permissively licensed placeholder assets; the store must not depend on a fragile external image host.
+TESTING
+Write unit tests for price math, promotions, tax, inventory reservations, state transitions, refund calculations and permissions.
+Write integration tests against a real test PostgreSQL database for checkout, payment webhooks, inventory consistency, promotions and returns.
+Use Supertest for API flows and Playwright for critical browser journeys: guest purchase, account purchase, coupon, failed payment retry, order history, admin product edit, inventory adjustment and refund.
+Explicitly test last-unit concurrency, duplicate checkout submission, duplicate webhook and duplicate refund attempt.
+CI must run lint, typecheck, unit/integration tests and production builds; include E2E where feasible.
+PERFORMANCE, SEO & ACCESSIBILITY
+Use Server Components by default for public pages and minimize client bundles. Avoid client-side waterfalls for SEO-critical content.
+Implement metadata, canonical URLs, Open Graph, Product/Breadcrumb/Organization structured data, robots and dynamic sitemap.
+Optimize images, fonts and route loading. Add database indexes based on access patterns and prevent N+1 queries.
+Target WCAG 2.2 AA. All major journeys must work by keyboard, have visible focus, correct semantic landmarks, labeled controls, accessible dialogs/drawers and reduced-motion support.
+LOCAL DEVELOPMENT & DEVOPS
+Provide Docker Compose for PostgreSQL, Redis, Meilisearch, MinIO and Mailpit/MailHog. The web/api/worker can run through pnpm during development.
+Required developer flow: pnpm install; docker compose up -d; migrate; seed; pnpm dev. Document all commands clearly.
+Expose health/readiness endpoints and structured logs with request IDs. Make instrumentation OpenTelemetry-ready.
+Add GitHub Actions for quality gates. Add Dockerfiles for api and worker. Document deployment options: Next.js web on Vercel or container; API/worker on a Node/container platform; managed PostgreSQL/Redis/search/object storage in production.
+Never require a paid SaaS to demonstrate the project locally.
+IMPLEMENTATION PROCESS
+First inspect the repository and produce/update a short implementation plan. Then build vertically in working slices: infrastructure/schema → auth/catalog → cart/checkout/payment → orders/inventory → admin → engagement/advanced modules → testing/quality.
+After each slice, run lint/typecheck/tests and fix regressions immediately. Keep the app runnable throughout.
+Prefer working end-to-end behavior over broad scaffolding. However, do not leave any core requirement as a placeholder at final delivery.
+When a requirement is ambiguous, choose a sensible production-style behavior and document the decision rather than stopping for trivial questions.
+Keep code clean, modular and typed. Avoid giant services/components, copy-pasted business rules and unsafe any types.
+At the end, run the production build, automated test suite and a smoke test. Verify the storefront and admin manually with representative flows.
+FINAL DELIVERABLES
+Complete source code and migrations.
+Deterministic seed data and demo accounts.
+OpenAPI docs.
+README with architecture, setup, env variables, commands, demo credentials, screenshots, test instructions and deployment notes.
+Passing lint/typecheck/tests/build.
+No known dead links or broken core actions.
+A short “implemented features” checklist and any intentionally deferred non-core production integrations, clearly separated from working local functionality.
+
+FINAL INSTRUCTION TO THE IMPLEMENTING AGENT: Do not return only an architecture plan or a collection of snippets. Build the repository. Make the important paths work end-to-end. Use the seed data to validate behavior. Keep the design polished and the backend correct. Stop only when the definition of done is demonstrably met.
+
+Version references checked for this brief
+Next.js blog / September 2026 security release: Next.js 16.3.8 Active LTS — https://nextjs.org/blog
+React GitHub releases: React 19.3.0 released September 9, 2026 — https://github.com/facebook/react/releases
+Node.js downloads: Node.js 24.21.0 LTS listed as LTS — https://nodejs.org/en/download
+NestJS GitHub releases: NestJS 12.0.3 released September 15, 2026 — https://github.com/nestjs/nest/releases
