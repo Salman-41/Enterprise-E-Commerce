@@ -61,12 +61,16 @@ export async function serial<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
         timeout: 20000,
       });
     } catch (e) {
-      if (
+      const retryable =
         e instanceof Prisma.PrismaClientKnownRequestError &&
-        ["P2034", "P2002"].includes(e.code) &&
-        n < 3
-      )
-        continue;
+        (["P2034", "P2002"].includes(e.code) ||
+          (e.code === "P2010" &&
+            ["40001", "40P01"].includes(String(e.meta?.code))));
+      if (retryable && n < 3) continue;
+      if (retryable)
+        throw new ConflictException(
+          "Concurrent change; please retry your request",
+        );
       throw e;
     }
   }
