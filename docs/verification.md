@@ -6,20 +6,20 @@ Recorded 4 October 2026. Results describe this revision and execution environmen
 
 - Database schema, two SQL migrations and deterministic seed. Executed migrations in PGlite (embedded PostgreSQL); seed printed 120 products / 360 variants / 104 users / 300 orders / 250 reviews / 720 inventory rows.
 - All five packages passed TypeScript checks. API compiled; Next.js production build generated 27 routes.
-- Unit tests: 9 API + 5 integration adapter + 4 worker + 9 frontend tests passed (27 total). The native database worker integration test requires TEST_DATABASE_URL and was skipped locally.
-- Real HTTP API suite: 64 assertions passed locally. Coverage includes checkout replay/input conflict, authorization, gift decline/retry, coupon usage caps, last-unit contention, signed webhooks, fulfillment and cash/gift refund replay.
+- Unit tests: 9 API + 5 integration adapter + 4 worker + 9 frontend tests passed (27 total). The additional database worker integration test requires TEST_DATABASE_URL, was skipped locally, and passed against native PostgreSQL in CI.
+- Real HTTP API suite: 64 assertions passed locally and against native PostgreSQL 17 in CI. Coverage includes checkout replay/input conflict, authorization, gift decline/retry, coupon usage caps, last-unit contention, signed webhooks, fulfillment and cash/gift refund replay.
 - Fixed JSONB key-order-dependent webhook deduplication found by the suite.
 - Source formatting and ESLint checks passed independently from TypeScript.
 - Six Playwright E2E flows passed (13.7 seconds) against the production Next.js server/API using Chromium headless shell: catalog edit + stock ledger, partial refund, read-only RBAC, guest purchase/tracking, declined-payment retry, customer login/history.
 - Actual desktop/mobile/store operations screenshots captured and visually inspected.
-- GitHub Actions exercised native PostgreSQL 17 migrations, deterministic seed and the worker reservation integration test successfully. Its first HTTP suite found raw-query SQLSTATE 40001 escaping transaction retries; the retry boundary now handles 40001 / 40P01 with four bounded attempts and a 409 response on exhaustion. Four regression tests passed. Native CI then passed all 57 HTTP assertions and all six browser flows ([run](https://github.com/Salman-41/Enterprise-E-Commerce/actions/runs/37214243975)).
+- GitHub Actions exercised native PostgreSQL 17 migrations, deterministic seed and the worker reservation integration test successfully. Its first HTTP suite found raw-query SQLSTATE 40001 escaping transaction retries; the retry boundary now handles 40001 / 40P01 with four bounded attempts and a 409 response on exhaustion. Four regression tests passed. The final native [CI run](https://github.com/Salman-41/Enterprise-E-Commerce/actions/runs/37214741555) passed migrations, seed, all package checks/builds, the expanded 64 HTTP assertions, the reservation database integration test and all six browser flows.
 - Actual background smoke check passed: PostgreSQL outbox → Redis 7 / BullMQ → running worker → local SMTP server; completed JobRecord, processed OutboxEvent and received message verified.
 - Completed allowlisted server-side sorts and filters for catalog, inventory, orders, customers, promotions, review moderation and paginated CMS content; seven additional real HTTP checks passed.
 - Fixed asynchronous brand selection in the editor and missing inventory/review permissions in the deterministic seed.
 
 ## IN PROGRESS
 
-- Publishing admin query fixes and rerunning the expanded 64-assertion suite in native PostgreSQL CI.
+- No active implementation changes for this milestone. Production deployment and external integration work remain open below.
 
 ## BLOCKED / NOT VERIFIED
 
@@ -31,7 +31,7 @@ Recorded 4 October 2026. Results describe this revision and execution environmen
 
 ## NEXT
 
-1. Confirm the expanded admin query regression checks in native CI.
+1. Verify application container builds and end-to-end Compose services on a Docker-enabled host.
 2. Exercise SMTP, Meilisearch indexing/rebuild and private bucket exports against Compose services.
 3. Add production deployment secrets, backups, shared rate limiting, resource limits and observability.
 4. Wire a real provider's test flow with merchant amount/currency validation before enabling payment integration.

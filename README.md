@@ -1,5 +1,7 @@
 # FIELDWORK · Enterprise E-Commerce
 
+[![Commerce quality](https://github.com/Salman-41/Enterprise-E-Commerce/actions/workflows/ci.yml/badge.svg)](https://github.com/Salman-41/Enterprise-E-Commerce/actions/workflows/ci.yml)
+
 A full-stack commerce application built by Salman: an editorial storefront, a permission-aware operations console, and a transactional commerce API. The interesting work is behind the checkout button—stock reservations, payment retries, gift-card allocation, refunds, and durable background events.
 
 **Status:** runnable local portfolio project with deterministic mock payments. This is not a live shop. Production deployment and third-party service verification remain open; see [verification](docs/verification.md).
@@ -92,7 +94,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-The local API suite passed **64 assertions** over real HTTP and an embedded PostgreSQL engine. It covers ownership, retry, coupon exhaustion, stock contention, signed duplicate webhooks, fulfillment limits, exact split refunds and validated admin table queries. Embedded PostgreSQL serializes backend connections; this is not proof of production PostgreSQL concurrency performance. All **six Playwright browser flows passed** locally using Chromium headless shell. Native PostgreSQL integration is configured in CI. [Verification details and remaining work](docs/verification.md) distinguish executed checks from pending ones.
+The local API suite passed **64 assertions** over real HTTP and an embedded PostgreSQL engine. It covers ownership, retry, coupon exhaustion, stock contention, signed duplicate webhooks, fulfillment limits, exact split refunds and validated admin table queries. Embedded PostgreSQL serializes backend connections; this is not proof of production PostgreSQL concurrency performance. All **six Playwright browser flows passed** locally using Chromium headless shell. The final [CI run](https://github.com/Salman-41/Enterprise-E-Commerce/actions/runs/37214741555) also passed all 64 HTTP assertions, database integration, builds and six browser flows against native PostgreSQL 17. [Verification details and remaining work](docs/verification.md) distinguish executed checks from pending ones.
 
 ## Engineering decisions
 
